@@ -1,3 +1,4 @@
+import { useStore } from "vuex"
 import {
   ROUND_DISTANCES,
   DEFAULT_HORSE_COUNT,
@@ -17,18 +18,7 @@ import {
   type RoundState
 } from "~/utils/raceEngine"
 import { MILLISECONDS_IN_SECOND, SNAPSHOT_COORDINATE_SYSTEM } from "~/utils/gameConstants"
-
-const STATE_KEYS = {
-  HORSES: "horse-race-horses",
-  PROGRAM: "horse-race-program",
-  RESULTS: "horse-race-results",
-  ACTIVE_ROUND: "horse-race-active-round",
-  IS_RUNNING: "horse-race-is-running",
-  IS_PAUSED: "horse-race-is-paused",
-  EVENT_LOG: "horse-race-event-log",
-  SEED: "horse-race-seed",
-  INTERMISSION_HANDLE: "horse-race-intermission-handle"
-} as const
+import { HORSE_RACE_MUTATIONS, type HorseRaceStoreState } from "~/store"
 
 const INTERMISSION_MS = 900
 const SIMULATION_SPEED = 12
@@ -71,6 +61,10 @@ const SNAPSHOT_MODE = {
 } as const
 
 const CHAMPIONSHIP_COMPLETE_MESSAGE = `Championship complete. All ${TOTAL_ROUNDS} rounds finished.`
+
+let horseMapCache: HorseMap = new Map()
+let simulationAccumulatorMs = 0
+let intermissionHandle: ReturnType<typeof setTimeout> | null = null
 
 interface LeaderboardRow {
   horseId: string
@@ -186,18 +180,16 @@ function buildLeaderboard(horses: Horse[], results: RoundResult[]): LeaderboardR
 }
 
 export function useHorseRaceGame() {
-  const horses = useState<Horse[]>(STATE_KEYS.HORSES, () => [])
-  const program = useState<RaceRound[]>(STATE_KEYS.PROGRAM, () => [])
-  const results = useState<RoundResult[]>(STATE_KEYS.RESULTS, () => [])
-  const activeRound = useState<RoundState | null>(STATE_KEYS.ACTIVE_ROUND, () => null)
-  const isRunning = useState<boolean>(STATE_KEYS.IS_RUNNING, () => false)
-  const isPaused = useState<boolean>(STATE_KEYS.IS_PAUSED, () => false)
-  const eventLog = useState<string[]>(STATE_KEYS.EVENT_LOG, () => [])
-  const seed = useState<number>(STATE_KEYS.SEED, () => 0)
-  const intermissionHandle = useState<ReturnType<typeof setTimeout> | null>(
-    STATE_KEYS.INTERMISSION_HANDLE,
-    () => null
-  )
+  const store = useStore<HorseRaceStoreState>()
+
+  const horses = computed(() => store.state.horses)
+  const program = computed(() => store.state.program)
+  const results = computed(() => store.state.results)
+  const activeRound = computed(() => store.state.activeRound)
+  const isRunning = computed(() => store.state.isRunning)
+  const isPaused = computed(() => store.state.isPaused)
+  const eventLog = computed(() => store.state.eventLog)
+  const seed = computed(() => store.state.seed)
 
   const hasProgram = computed(
     () => horses.value.length === DEFAULT_HORSE_COUNT && program.value.length === TOTAL_ROUNDS
@@ -209,31 +201,64 @@ export function useHorseRaceGame() {
   const canPause = computed(() => Boolean(activeRound.value) && isRunning.value)
   const leaderboard = computed(() => buildLeaderboard(horses.value, results.value))
 
-  let horseMapCache: HorseMap = new Map()
-  let simulationAccumulatorMs = 0
+  function setHorses(nextHorses: Horse[]) {
+    store.commit(HORSE_RACE_MUTATIONS.SET_HORSES, nextHorses)
+  }
 
-  function appendLog(message: string) {
-    const timestamp = new Date().toLocaleTimeString("en-US", TIMESTAMP_FORMAT)
-    eventLog.value = [`${timestamp} ${message}`, ...eventLog.value].slice(0, EVENT_LOG_LIMIT)
+  function setProgram(nextProgram: RaceRound[]) {
+    store.commit(HORSE_RACE_MUTATIONS.SET_PROGRAM, nextProgram)
+  }
+
+  function setResults(nextResults: RoundResult[]) {
+    store.commit(HORSE_RACE_MUTATIONS.SET_RESULTS, nextResults)
+  }
+
+  function setActiveRound(nextRound: RoundState | null) {
+    store.commit(HORSE_RACE_MUTATIONS.SET_ACTIVE_ROUND, nextRound)
+  }
+
+  function setIsRunning(nextIsRunning: boolean) {
+    store.commit(HORSE_RACE_MUTATIONS.SET_IS_RUNNING, nextIsRunning)
+  }
+
+  function setIsPaused(nextIsPaused: boolean) {
+    store.commit(HORSE_RACE_MUTATIONS.SET_IS_PAUSED, nextIsPaused)
+  }
+
+  function setEventLog(nextEventLog: string[]) {
+    store.commit(HORSE_RACE_MUTATIONS.SET_EVENT_LOG, nextEventLog)
+  }
+
+  function setSeed(nextSeed: number) {
+    store.commit(HORSE_RACE_MUTATIONS.SET_SEED, nextSeed)
   }
 
   function clearIntermission() {
-    if (intermissionHandle.value) {
-      clearTimeout(intermissionHandle.value)
-      intermissionHandle.value = null
+    if (intermissionHandle) {
+      clearTimeout(intermissionHandle)
+      intermissionHandle = null
     }
   }
 
+  function ensureHorseMapCache() {
+    if (horseMapCache.size !== horses.value.length) {
+      horseMapCache = createHorseMap(horses.value)
+    }
+  }
+
+  function appendLog(message: string) {
+    const timestamp = new Date().toLocaleTimeString("en-US", TIMESTAMP_FORMAT)
+    setEventLog([`${timestamp} ${message}`, ...eventLog.value].slice(0, EVENT_LOG_LIMIT))
+  }
+
   function setRoundStatus(roundIndex: number, status: RoundStatus) {
-    program.value = program.value.map((round, index) =>
-      index === roundIndex ? { ...round, status } : round
-    )
+    store.commit(HORSE_RACE_MUTATIONS.SET_ROUND_STATUS, { roundIndex, status })
   }
 
   function clearRoundState() {
-    activeRound.value = null
-    isRunning.value = false
-    isPaused.value = false
+    setActiveRound(null)
+    setIsRunning(false)
+    setIsPaused(false)
     simulationAccumulatorMs = 0
   }
 
@@ -255,15 +280,19 @@ export function useHorseRaceGame() {
 
   function generateProgram(nextSeed: number = Date.now()) {
     clearIntermission()
-    seed.value = nextSeed
-    const rng = createSeededRng(nextSeed)
+    setSeed(nextSeed)
 
-    horses.value = createHorsePool(DEFAULT_HORSE_COUNT, rng)
-    horseMapCache = createHorseMap(horses.value)
-    program.value = withStatus(buildRaceSchedule(horses.value, rng))
-    results.value = []
+    const rng = createSeededRng(nextSeed)
+    const nextHorses = createHorsePool(DEFAULT_HORSE_COUNT, rng)
+    const nextProgram = withStatus(buildRaceSchedule(nextHorses, rng))
+
+    setHorses(nextHorses)
+    setProgram(nextProgram)
+    setResults([])
     clearRoundState()
-    eventLog.value = []
+    setEventLog([])
+
+    horseMapCache = createHorseMap(nextHorses)
 
     appendLog(`Generated ${DEFAULT_HORSE_COUNT} horses and a ${TOTAL_ROUNDS}-round schedule (seed ${nextSeed}).`)
   }
@@ -279,13 +308,14 @@ export function useHorseRaceGame() {
       return
     }
 
+    ensureHorseMapCache()
     clearIntermission()
     setRoundStatus(roundIndex, ROUND_STATUS.RUNNING)
 
-    activeRound.value = createRoundState(nextRound, horseMapCache)
+    setActiveRound(createRoundState(nextRound, horseMapCache))
     simulationAccumulatorMs = 0
-    isPaused.value = false
-    isRunning.value = true
+    setIsPaused(false)
+    setIsRunning(true)
 
     appendLog(`Round ${nextRound.id} started (${nextRound.distance}m).`)
   }
@@ -295,8 +325,10 @@ export function useHorseRaceGame() {
       return
     }
 
-    isPaused.value = !isPaused.value
-    if (isPaused.value) {
+    const nextIsPaused = !isPaused.value
+    setIsPaused(nextIsPaused)
+
+    if (nextIsPaused) {
       appendLog(`Round ${activeRound.value?.roundId} paused.`)
     } else {
       appendLog(`Round ${activeRound.value?.roundId} resumed.`)
@@ -312,7 +344,7 @@ export function useHorseRaceGame() {
     const finishedRoundIndex = results.value.length
     const result = buildRoundResult(currentRoundState, horseMap)
 
-    results.value = [...results.value, result]
+    setResults([...results.value, result])
     setRoundStatus(finishedRoundIndex, ROUND_STATUS.FINISHED)
 
     const winner = result.order[0]
@@ -323,7 +355,7 @@ export function useHorseRaceGame() {
     clearRoundState()
 
     if (results.value.length < program.value.length) {
-      intermissionHandle.value = setTimeout(() => {
+      intermissionHandle = setTimeout(() => {
         start()
       }, INTERMISSION_MS)
     } else {
@@ -366,16 +398,13 @@ export function useHorseRaceGame() {
 
   function resetGame() {
     clearIntermission()
-    horses.value = []
-    program.value = []
-    results.value = []
-    clearRoundState()
-    eventLog.value = []
-    seed.value = 0
+    store.commit(HORSE_RACE_MUTATIONS.RESET_GAME_STATE)
     horseMapCache = new Map()
+    simulationAccumulatorMs = 0
   }
 
   function renderSnapshot(): string {
+    ensureHorseMapCache()
     const latestResult = results.value[results.value.length - 1] ?? null
 
     const payload: SnapshotPayload = {
