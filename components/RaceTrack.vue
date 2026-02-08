@@ -17,6 +17,8 @@ const props = defineProps<{
   isPaused: boolean
 }>()
 
+const { app } = useRuntimeConfig()
+const normalizedBaseUrl = app.baseURL.endsWith("/") ? app.baseURL : `${app.baseURL}/`
 const markers = TRACK_MARKERS
 
 const roundLabel = computed(() => {
@@ -32,7 +34,9 @@ function horseColor(entry: RoundEntry): string {
 
 function horseMaskSrc(entry: RoundEntry): string {
   const isStopped = props.isPaused || entry.finishTimeMs !== null
-  return isStopped ? HORSE_ART_ASSETS.STANDING_MASK : HORSE_ART_ASSETS.RUNNING_MASK
+  const assetPath = isStopped ? HORSE_ART_ASSETS.STANDING_MASK : HORSE_ART_ASSETS.RUNNING_MASK
+  const normalizedAssetPath = assetPath.startsWith("/") ? assetPath.slice(1) : assetPath
+  return `${normalizedBaseUrl}${normalizedAssetPath}`
 }
 
 function normalizedProgress(progress: number): string {
