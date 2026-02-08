@@ -287,4 +287,36 @@ function normalizedProgress(progress: number): string {
     --horse-token-width: 168px;
   }
 }
+
+@media (max-width: 768px) {
+  .track-panel {
+    padding: 14px;
+  }
+
+  .lane {
+    grid-template-columns: 32px 1fr;
+    gap: 8px;
+  }
+
+  .lane-track {
+    height: 52px;
+  }
+
+  .horse-token {
+    --horse-token-width: 156px;
+    top: 3px;
+    gap: 6px;
+    padding: 3px 6px;
+  }
+
+  .horse-art {
+    width: 66px;
+    height: 36px;
+    flex-basis: 66px;
+  }
+
+  .horse-token strong {
+    max-width: 80px;
+  }
+}
 </style>

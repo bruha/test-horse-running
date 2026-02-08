@@ -15,7 +15,7 @@ if printf '%s' "$FIRST_LINE" | grep -Eq '^(Merge|Revert|fixup!|squash!)'; then
   exit 0
 fi
 
-TYPE_PATTERN='feat|fix|perf|refactor|docs|test|chore|build|ci'
+TYPE_PATTERN='feat|fix|perf|refactor|docs|test|chore|ci|style'
 CONVENTIONAL_PATTERN="^(${TYPE_PATTERN})(\([a-z0-9._/-]+\))?(!)?: .+"
 
 if printf '%s' "$FIRST_LINE" | grep -Eq "$CONVENTIONAL_PATTERN"; then
@@ -26,7 +26,7 @@ cat >&2 <<'MSG'
 Commit message must follow Conventional Commits:
   <type>(optional-scope): <imperative summary>
 Allowed types:
-  feat, fix, perf, refactor, docs, test, chore, build, ci
+  feat, fix, perf, refactor, docs, test, chore, ci, style
 Examples:
   feat(game): add seeded race replay
   fix(track): clamp horse progress to lane width

@@ -413,11 +413,93 @@ tbody td {
 
 @media (max-width: 1280px) {
   .layout {
+    grid-template-columns: repeat(2, minmax(280px, 1fr));
+  }
+
+  .layout > :nth-child(2) {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
+  .layout > :nth-child(1) {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .layout > :nth-child(3) {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+  }
+
+  .stats-grid > :nth-child(3) {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 768px) {
+  .layout {
     grid-template-columns: 1fr;
+  }
+
+  .layout > :nth-child(2) {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .layout > :nth-child(1) {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .layout > :nth-child(3) {
+    grid-column: 1;
+    grid-row: 3;
   }
 
   .stats-grid {
     grid-template-columns: 1fr;
+  }
+
+  .app {
+    padding: 18px 12px 28px;
+  }
+
+  .hero p {
+    font-size: 0.94rem;
+    line-height: 1.4;
+  }
+
+  .controls {
+    gap: 8px;
+  }
+
+  .controls .btn {
+    flex: 1 1 calc(50% - 8px);
+  }
+
+  .controls .status {
+    width: 100%;
+  }
+
+  .card {
+    border-radius: 14px;
+    padding: 12px;
+  }
+
+  .card-copy {
+    font-size: 0.78rem;
+  }
+
+  table {
+    font-size: 0.75rem;
+  }
+
+  thead th {
+    font-size: 0.68rem;
   }
 }
 </style>
