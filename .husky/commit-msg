@@ -1,0 +1,35 @@
+#!/usr/bin/env sh
+set -eu
+
+MESSAGE_FILE="${1:-}"
+
+if [ -z "$MESSAGE_FILE" ] || [ ! -f "$MESSAGE_FILE" ]; then
+  echo "commit-msg hook: message file is missing." >&2
+  exit 1
+fi
+
+FIRST_LINE="$(grep -vE '^(#|$)' "$MESSAGE_FILE" | head -n 1 || true)"
+
+# Allow Git-generated merge/revert and autosquash commits.
+if printf '%s' "$FIRST_LINE" | grep -Eq '^(Merge|Revert|fixup!|squash!)'; then
+  exit 0
+fi
+
+TYPE_PATTERN='feat|fix|perf|refactor|docs|test|chore|build|ci'
+CONVENTIONAL_PATTERN="^(${TYPE_PATTERN})(\([a-z0-9._/-]+\))?(!)?: .+"
+
+if printf '%s' "$FIRST_LINE" | grep -Eq "$CONVENTIONAL_PATTERN"; then
+  exit 0
+fi
+
+cat >&2 <<'MSG'
+Commit message must follow Conventional Commits:
+  <type>(optional-scope): <imperative summary>
+Allowed types:
+  feat, fix, perf, refactor, docs, test, chore, build, ci
+Examples:
+  feat(game): add seeded race replay
+  fix(track): clamp horse progress to lane width
+MSG
+
+exit 1
