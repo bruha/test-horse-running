@@ -1,0 +1,12 @@
+node_modules
+.nuxt
+.output
+.data
+dist
+coverage
+playwright-report
+test-results
+.tmp-*
+.npm-cache
+.swift-module-cache
+.codex/
