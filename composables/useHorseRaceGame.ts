@@ -199,6 +199,16 @@ export function useHorseRaceGame() {
   )
   const canStart = computed(() => hasProgram.value && !isCompleted.value && !isRunning.value)
   const canPause = computed(() => Boolean(activeRound.value) && isRunning.value)
+  const canReset = computed(
+    () =>
+      horses.value.length > 0 ||
+      program.value.length > 0 ||
+      results.value.length > 0 ||
+      Boolean(activeRound.value) ||
+      isRunning.value ||
+      isPaused.value ||
+      eventLog.value.length > 0
+  )
   const leaderboard = computed(() => buildLeaderboard(horses.value, results.value))
 
   function setHorses(nextHorses: Horse[]) {
@@ -294,7 +304,7 @@ export function useHorseRaceGame() {
 
     horseMapCache = createHorseMap(nextHorses)
 
-    appendLog(`Generated ${DEFAULT_HORSE_COUNT} horses and a ${TOTAL_ROUNDS}-round schedule (seed ${nextSeed}).`)
+    appendLog(`Generated ${DEFAULT_HORSE_COUNT} horses and a ${TOTAL_ROUNDS}-round schedule.`)
   }
 
   function start() {
@@ -454,6 +464,7 @@ export function useHorseRaceGame() {
     isCompleted,
     canStart,
     canPause,
+    canReset,
     seed,
     eventLog,
     leaderboard,

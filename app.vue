@@ -27,7 +27,7 @@ const {
   isCompleted,
   canStart,
   canPause,
-  seed,
+  canReset,
   eventLog,
   leaderboard,
   generateProgram,
@@ -118,21 +118,13 @@ onBeforeUnmount(() => {
       <button type="button" class="btn" :disabled="!canPause" @click="togglePause()">
         {{ isPaused ? "Resume" : "Pause" }}
       </button>
-      <button type="button" class="btn" @click="resetGame()">Reset</button>
+      <button type="button" class="btn" :disabled="!canReset" @click="resetGame()">
+        Reset
+      </button>
 
       <div class="status">
         <span class="status-label">Status</span>
         <strong>{{ statusLabel }}</strong>
-      </div>
-
-      <div class="status">
-        <span class="status-label">Seed</span>
-        <strong>{{ seed || "-" }}</strong>
-      </div>
-
-      <div class="status">
-        <span class="status-label">Snapshot</span>
-        <strong>{{ horses.length }} horses loaded</strong>
       </div>
     </section>
 

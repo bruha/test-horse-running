@@ -3,12 +3,15 @@ const { test, expect } = require("@playwright/test")
 test("game flow: generate, start, pause, resume, and receive results", async ({ page }) => {
   await page.goto("/")
 
+  const resetButton = page.getByRole("button", { name: "Reset" })
+
   await expect(page.getByRole("heading", { name: "Horse Racing Trial Day" })).toBeVisible()
+  await expect(resetButton).toBeDisabled()
   await page.getByRole("button", { name: "Generate Program" }).click()
+  await expect(resetButton).toBeEnabled()
 
   await expect(page.locator("[data-testid='program-round']")).toHaveCount(6)
   await expect(page.locator("[data-testid='horse-row']")).toHaveCount(20)
-  await expect(page.getByText("20 horses loaded")).toBeVisible()
 
   await page.getByRole("button", { name: "Start" }).click()
   await expect(page.getByText(/Round 1 in progress/i)).toBeVisible()
@@ -38,4 +41,9 @@ test("game flow: generate, start, pause, resume, and receive results", async ({ 
   await expect(page.locator("[data-testid='result-round']").first()).toBeVisible({
     timeout: 20_000
   })
+
+  await resetButton.click()
+  await expect(resetButton).toBeDisabled()
+  await expect(page.locator("[data-testid='program-round']")).toHaveCount(0)
+  await expect(page.locator("[data-testid='horse-row']")).toHaveCount(0)
 })
