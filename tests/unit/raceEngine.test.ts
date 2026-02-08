@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import test from "node:test"
 import {
   ROUND_DISTANCES,
+  ROUND_STATUS,
   createSeededRng,
   createHorsePool,
   buildRaceSchedule,
@@ -9,7 +10,7 @@ import {
   createRoundState,
   stepRound,
   simulateRound
-} from "../../utils/raceEngine.mjs"
+} from "../../utils/raceEngine.ts"
 
 test("createHorsePool returns exactly 20 horses with unique names", () => {
   const rng = createSeededRng(42)
@@ -95,7 +96,7 @@ test("higher condition horse consistently beats lower condition horse over repea
         id: 1,
         distance: 1400,
         horseIds: ["horse-high", "horse-low"],
-        status: "pending"
+        status: ROUND_STATUS.PENDING
       },
       createHorseMap(horses),
       rng,

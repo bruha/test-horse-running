@@ -10,7 +10,7 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "test": "npm run test:unit && npm run test:e2e",
-    "test:unit": "node --test tests/unit/raceEngine.test.mjs",
+    "test:unit": "node --experimental-strip-types --test tests/unit/raceEngine.test.ts",
     "test:e2e": "playwright test"
   },
   "dependencies": {

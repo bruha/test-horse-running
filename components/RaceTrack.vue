@@ -1,20 +1,18 @@
-<script setup>
+<script setup lang="ts">
 import { computed } from "vue"
+import { type Horse, type RoundEntry, type RoundState } from "~/utils/raceEngine"
 
-const props = defineProps({
-  activeRound: {
-    type: Object,
-    default: null
-  },
-  horsesById: {
-    type: Object,
-    required: true
-  },
-  isPaused: {
-    type: Boolean,
-    required: true
-  }
-})
+const DEFAULT_HORSE_COLOR = "#9ca3af"
+const HORSE_MASK_ASSET = "/images/running-horse-mask.apng"
+const HORSE_STAND_MASK_ASSET = "/images/running-horse-stand-mask.png"
+const TRACK_PROGRESS_MIN = 0
+const TRACK_PROGRESS_MAX = 1
+
+const props = defineProps<{
+  activeRound: RoundState | null
+  horsesById: Map<string, Horse>
+  isPaused: boolean
+}>()
 
 const markers = [0, 25, 50, 75, 100]
 
@@ -25,13 +23,13 @@ const roundLabel = computed(() => {
   return `Round ${props.activeRound.roundId} • ${props.activeRound.distance}m`
 })
 
-function horseColor(entry) {
-  return props.horsesById.get(entry.horseId)?.color ?? "#9ca3af"
+function horseColor(entry: RoundEntry): string {
+  return props.horsesById.get(entry.horseId)?.color ?? DEFAULT_HORSE_COLOR
 }
 
-function horseMaskSrc(entry) {
+function horseMaskSrc(entry: RoundEntry): string {
   const isStopped = props.isPaused || entry.finishTimeMs !== null
-  return isStopped ? "/images/running-horse-stand-mask.png" : "/images/running-horse-mask.apng"
+  return isStopped ? HORSE_STAND_MASK_ASSET : HORSE_MASK_ASSET
 }
 </script>
 
@@ -65,7 +63,7 @@ function horseMaskSrc(entry) {
             data-testid="horse-token"
             :data-progress="entry.progress.toFixed(4)"
             :style="{
-              '--progress': Math.min(1, Math.max(0, entry.progress)).toFixed(4)
+              '--progress': Math.min(TRACK_PROGRESS_MAX, Math.max(TRACK_PROGRESS_MIN, entry.progress)).toFixed(4)
             }"
           >
             <div class="horse-art" aria-hidden="true">

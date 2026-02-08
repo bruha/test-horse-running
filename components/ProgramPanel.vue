@@ -1,29 +1,25 @@
-<script setup>
-const props = defineProps({
-  program: {
-    type: Array,
-    required: true
-  },
-  horsesById: {
-    type: Object,
-    required: true
-  }
-})
+<script setup lang="ts">
+import { ROUND_STATUS, type Horse, type RaceRound, type RoundStatus } from "~/utils/raceEngine"
 
-function participantLabel(round) {
+const ROUND_STATUS_LABEL = Object.freeze({
+  [ROUND_STATUS.PENDING]: "Scheduled",
+  [ROUND_STATUS.RUNNING]: "Running",
+  [ROUND_STATUS.FINISHED]: "Finished"
+} as const)
+
+const props = defineProps<{
+  program: RaceRound[]
+  horsesById: Map<string, Horse>
+}>()
+
+function participantLabel(round: RaceRound): string {
   return round.horseIds
     .map((horseId) => props.horsesById.get(horseId)?.name ?? horseId)
     .join(", ")
 }
 
-function statusText(status) {
-  if (status === "running") {
-    return "Running"
-  }
-  if (status === "finished") {
-    return "Finished"
-  }
-  return "Scheduled"
+function statusText(status: RoundStatus): string {
+  return ROUND_STATUS_LABEL[status]
 }
 </script>
 
@@ -124,4 +120,3 @@ function statusText(status) {
   color: rgba(203, 213, 225, 0.95);
 }
 </style>
-

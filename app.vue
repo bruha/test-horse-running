@@ -1,8 +1,19 @@
-<script setup>
+<script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted } from "vue"
 import ProgramPanel from "~/components/ProgramPanel.vue"
 import RaceTrack from "~/components/RaceTrack.vue"
 import ResultsPanel from "~/components/ResultsPanel.vue"
+
+const LEADERBOARD_PREVIEW_COUNT = 5
+const INITIAL_FRAME_REQUEST_ID = 0
+const INITIAL_FRAME_TIMESTAMP = 0
+
+declare global {
+  interface Window {
+    render_game_to_text?: () => string
+    advanceTime?: (ms: number) => void | Promise<void>
+  }
+}
 
 const game = useHorseRaceGame()
 
@@ -28,7 +39,7 @@ const {
 } = game
 
 const horsesById = computed(() => new Map(horses.value.map((horse) => [horse.id, horse])))
-const topLeaderboard = computed(() => leaderboard.value.slice(0, 5))
+const topLeaderboard = computed(() => leaderboard.value.slice(0, LEADERBOARD_PREVIEW_COUNT))
 
 const statusLabel = computed(() => {
   if (!hasProgram.value) {
@@ -46,8 +57,8 @@ const statusLabel = computed(() => {
   return "Program ready to start"
 })
 
-let frameHandle = 0
-let lastFrame = 0
+let frameHandle = INITIAL_FRAME_REQUEST_ID
+let lastFrame = INITIAL_FRAME_TIMESTAMP
 
 const updateFrame = (timestamp) => {
   if (!lastFrame) {

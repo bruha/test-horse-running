@@ -1,17 +1,16 @@
-<script setup>
-const props = defineProps({
-  results: {
-    type: Array,
-    required: true
-  },
-  horsesById: {
-    type: Object,
-    required: true
-  }
-})
+<script setup lang="ts">
+import { type Horse, type RoundResult } from "~/utils/raceEngine"
 
-function horseColor(horseId) {
-  return props.horsesById.get(horseId)?.color ?? "#94a3b8"
+const DEFAULT_HORSE_COLOR = "#94a3b8"
+const MILLISECONDS_IN_SECOND = 1000
+
+const props = defineProps<{
+  results: RoundResult[]
+  horsesById: Map<string, Horse>
+}>()
+
+function horseColor(horseId: string): string {
+  return props.horsesById.get(horseId)?.color ?? DEFAULT_HORSE_COLOR
 }
 </script>
 
@@ -45,7 +44,7 @@ function horseColor(horseId) {
           <span class="rank">#{{ entry.position }}</span>
           <span class="color-dot" :style="{ backgroundColor: horseColor(entry.horseId) }" />
           <span class="name">{{ entry.horseName }}</span>
-          <span class="time">{{ (entry.timeMs / 1000).toFixed(2) }}s</span>
+          <span class="time">{{ (entry.timeMs / MILLISECONDS_IN_SECOND).toFixed(2) }}s</span>
         </li>
       </ol>
     </article>
@@ -141,4 +140,3 @@ function horseColor(horseId) {
   font-variant-numeric: tabular-nums;
 }
 </style>
-

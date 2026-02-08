@@ -1,13 +1,32 @@
 import {
   ROUND_DISTANCES,
+  DEFAULT_HORSE_COUNT,
+  ROUND_STATUS,
   createSeededRng,
   createHorsePool,
   buildRaceSchedule,
   createHorseMap,
   createRoundState,
   stepRound,
-  buildRoundResult
-} from "~/utils/raceEngine.mjs"
+  buildRoundResult,
+  type Horse,
+  type HorseMap,
+  type RaceRound,
+  type RoundResult,
+  type RoundState
+} from "~/utils/raceEngine"
+
+const STATE_KEYS = Object.freeze({
+  HORSES: "horse-race-horses",
+  PROGRAM: "horse-race-program",
+  RESULTS: "horse-race-results",
+  ACTIVE_ROUND: "horse-race-active-round",
+  IS_RUNNING: "horse-race-is-running",
+  IS_PAUSED: "horse-race-is-paused",
+  EVENT_LOG: "horse-race-event-log",
+  SEED: "horse-race-seed",
+  INTERMISSION_HANDLE: "horse-race-intermission-handle"
+} as const)
 
 const INTERMISSION_MS = 900
 const SIMULATION_SPEED = 12
@@ -16,16 +35,90 @@ const MAX_FRAME_DELTA_MS = 120
 const MAX_STEPS_PER_FRAME = 8
 const MAX_ACCUMULATED_SIMULATION_MS = SIMULATION_STEP_MS * MAX_STEPS_PER_FRAME
 
-function withStatus(schedule) {
+const EVENT_LOG_LIMIT = 16
+const TOP_POSITION_POINTS = Object.freeze({
+  FIRST: 5,
+  SECOND: 3,
+  THIRD: 2,
+  PARTICIPATION: 1
+} as const)
+
+const PODIUM_POSITION = Object.freeze({
+  FIRST: 1,
+  SECOND: 2,
+  THIRD: 3
+} as const)
+
+const TIMESTAMP_FORMAT: Intl.DateTimeFormatOptions = Object.freeze({
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hour12: false
+})
+
+const MILLISECONDS_IN_SECOND = 1000
+const TOTAL_ROUNDS = ROUND_DISTANCES.length
+const SNAPSHOT_MODE = Object.freeze({
+  IDLE: "idle",
+  PAUSED: "paused",
+  RACING: "racing",
+  FINISHED: "finished",
+  READY: "ready"
+} as const)
+
+const CHAMPIONSHIP_COMPLETE_MESSAGE = `Championship complete. All ${TOTAL_ROUNDS} rounds finished.`
+
+interface LeaderboardRow {
+  horseId: string
+  name: string
+  color: string
+  condition: number
+  rounds: number
+  podiums: number
+  wins: number
+  points: number
+  totalTimeMs: number
+  avgTimeMs: number
+}
+
+interface SnapshotEntry {
+  horseId: string
+  horseName: string
+  lane: number
+  progress: number
+  speedMps: number
+  finished: boolean
+}
+
+interface SnapshotPayload {
+  mode: (typeof SNAPSHOT_MODE)[keyof typeof SNAPSHOT_MODE]
+  coordinateSystem: string
+  rounds: {
+    total: number
+    completed: number
+  }
+  activeRound: {
+    id: number
+    distance: number
+    elapsedMs: number
+    entries: SnapshotEntry[]
+  } | null
+  latestResult: {
+    roundId: number
+    winner: string | null
+  } | null
+}
+
+function withStatus(schedule: RaceRound[]): RaceRound[] {
   return schedule.map((round) => ({
     ...round,
-    status: "pending"
+    status: ROUND_STATUS.PENDING
   }))
 }
 
-function buildLeaderboard(horses, results) {
+function buildLeaderboard(horses: Horse[], results: RoundResult[]): LeaderboardRow[] {
   const horseLookup = new Map(horses.map((horse) => [horse.id, horse]))
-  const summary = new Map(
+  const summary = new Map<string, Omit<LeaderboardRow, "avgTimeMs">>(
     horses.map((horse) => [
       horse.id,
       {
@@ -52,18 +145,18 @@ function buildLeaderboard(horses, results) {
       row.rounds += 1
       row.totalTimeMs += item.timeMs
 
-      if (item.position === 1) {
+      if (item.position === PODIUM_POSITION.FIRST) {
         row.wins += 1
         row.podiums += 1
-        row.points += 5
-      } else if (item.position === 2) {
+        row.points += TOP_POSITION_POINTS.FIRST
+      } else if (item.position === PODIUM_POSITION.SECOND) {
         row.podiums += 1
-        row.points += 3
-      } else if (item.position === 3) {
+        row.points += TOP_POSITION_POINTS.SECOND
+      } else if (item.position === PODIUM_POSITION.THIRD) {
         row.podiums += 1
-        row.points += 2
+        row.points += TOP_POSITION_POINTS.THIRD
       } else {
-        row.points += 1
+        row.points += TOP_POSITION_POINTS.PARTICIPATION
       }
     }
   }
@@ -80,6 +173,7 @@ function buildLeaderboard(horses, results) {
       if (left.avgTimeMs !== right.avgTimeMs) {
         return left.avgTimeMs - right.avgTimeMs
       }
+
       const leftHorse = horseLookup.get(left.horseId)
       const rightHorse = horseLookup.get(right.horseId)
       const leftCondition = leftHorse?.condition ?? 0
@@ -89,37 +183,35 @@ function buildLeaderboard(horses, results) {
 }
 
 export function useHorseRaceGame() {
-  const horses = useState("horse-race-horses", () => [])
-  const program = useState("horse-race-program", () => [])
-  const results = useState("horse-race-results", () => [])
-  const activeRound = useState("horse-race-active-round", () => null)
-  const isRunning = useState("horse-race-is-running", () => false)
-  const isPaused = useState("horse-race-is-paused", () => false)
-  const eventLog = useState("horse-race-event-log", () => [])
-  const seed = useState("horse-race-seed", () => 0)
-  const intermissionHandle = useState("horse-race-intermission-handle", () => null)
+  const horses = useState<Horse[]>(STATE_KEYS.HORSES, () => [])
+  const program = useState<RaceRound[]>(STATE_KEYS.PROGRAM, () => [])
+  const results = useState<RoundResult[]>(STATE_KEYS.RESULTS, () => [])
+  const activeRound = useState<RoundState | null>(STATE_KEYS.ACTIVE_ROUND, () => null)
+  const isRunning = useState<boolean>(STATE_KEYS.IS_RUNNING, () => false)
+  const isPaused = useState<boolean>(STATE_KEYS.IS_PAUSED, () => false)
+  const eventLog = useState<string[]>(STATE_KEYS.EVENT_LOG, () => [])
+  const seed = useState<number>(STATE_KEYS.SEED, () => 0)
+  const intermissionHandle = useState<ReturnType<typeof setTimeout> | null>(
+    STATE_KEYS.INTERMISSION_HANDLE,
+    () => null
+  )
 
   const hasProgram = computed(
-    () => horses.value.length === 20 && program.value.length === ROUND_DISTANCES.length
+    () => horses.value.length === DEFAULT_HORSE_COUNT && program.value.length === ROUND_DISTANCES.length
   )
   const isCompleted = computed(
     () => hasProgram.value && results.value.length === program.value.length && !activeRound.value
   )
   const canStart = computed(() => hasProgram.value && !isCompleted.value && !isRunning.value)
   const canPause = computed(() => Boolean(activeRound.value) && isRunning.value)
-
   const leaderboard = computed(() => buildLeaderboard(horses.value, results.value))
-  let horseMapCache = new Map()
+
+  let horseMapCache: HorseMap = new Map()
   let simulationAccumulatorMs = 0
 
-  function appendLog(message) {
-    const timestamp = new Date().toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: false
-    })
-    eventLog.value = [`${timestamp} ${message}`, ...eventLog.value].slice(0, 16)
+  function appendLog(message: string) {
+    const timestamp = new Date().toLocaleTimeString("en-US", TIMESTAMP_FORMAT)
+    eventLog.value = [`${timestamp} ${message}`, ...eventLog.value].slice(0, EVENT_LOG_LIMIT)
   }
 
   function clearIntermission() {
@@ -129,12 +221,12 @@ export function useHorseRaceGame() {
     }
   }
 
-  function generateProgram(nextSeed = Date.now()) {
+  function generateProgram(nextSeed: number = Date.now()) {
     clearIntermission()
     seed.value = nextSeed
     const rng = createSeededRng(nextSeed)
 
-    horses.value = createHorsePool(20, rng)
+    horses.value = createHorsePool(DEFAULT_HORSE_COUNT, rng)
     horseMapCache = createHorseMap(horses.value)
     program.value = withStatus(buildRaceSchedule(horses.value, rng))
     results.value = []
@@ -144,7 +236,7 @@ export function useHorseRaceGame() {
     eventLog.value = []
     simulationAccumulatorMs = 0
 
-    appendLog(`Generated 20 horses and a 6-round schedule (seed ${nextSeed}).`)
+    appendLog(`Generated ${DEFAULT_HORSE_COUNT} horses and a ${TOTAL_ROUNDS}-round schedule (seed ${nextSeed}).`)
   }
 
   function start() {
@@ -161,7 +253,7 @@ export function useHorseRaceGame() {
     clearIntermission()
     program.value = program.value.map((round, index) => {
       if (index === roundIndex) {
-        return { ...round, status: "running" }
+        return { ...round, status: ROUND_STATUS.RUNNING }
       }
       return round
     })
@@ -187,7 +279,7 @@ export function useHorseRaceGame() {
     }
   }
 
-  function finishRound(horseMap) {
+  function finishRound(horseMap: HorseMap) {
     if (!activeRound.value) {
       return
     }
@@ -199,14 +291,14 @@ export function useHorseRaceGame() {
     results.value = [...results.value, result]
     program.value = program.value.map((round, index) => {
       if (index === finishedRoundIndex) {
-        return { ...round, status: "finished" }
+        return { ...round, status: ROUND_STATUS.FINISHED }
       }
       return round
     })
 
     const winner = result.order[0]
     appendLog(
-      `Round ${result.roundId} finished. Winner: ${winner.horseName} (${(winner.timeMs / 1000).toFixed(2)}s).`
+      `Round ${result.roundId} finished. Winner: ${winner.horseName} (${(winner.timeMs / MILLISECONDS_IN_SECOND).toFixed(2)}s).`
     )
 
     activeRound.value = null
@@ -218,11 +310,11 @@ export function useHorseRaceGame() {
         start()
       }, INTERMISSION_MS)
     } else {
-      appendLog("Championship complete. All 6 rounds finished.")
+      appendLog(CHAMPIONSHIP_COMPLETE_MESSAGE)
     }
   }
 
-  function advanceBy(deltaMs) {
+  function advanceBy(deltaMs: number) {
     if (!activeRound.value || !isRunning.value || isPaused.value || deltaMs <= 0) {
       return
     }
@@ -269,19 +361,19 @@ export function useHorseRaceGame() {
     simulationAccumulatorMs = 0
   }
 
-  function renderSnapshot() {
+  function renderSnapshot(): string {
     const latestResult = results.value[results.value.length - 1] ?? null
-    const mode = !hasProgram.value
-      ? "idle"
+    const mode: SnapshotPayload["mode"] = !hasProgram.value
+      ? SNAPSHOT_MODE.IDLE
       : activeRound.value
         ? isPaused.value
-          ? "paused"
-          : "racing"
+          ? SNAPSHOT_MODE.PAUSED
+          : SNAPSHOT_MODE.RACING
         : isCompleted.value
-          ? "finished"
-          : "ready"
+          ? SNAPSHOT_MODE.FINISHED
+          : SNAPSHOT_MODE.READY
 
-    const payload = {
+    const payload: SnapshotPayload = {
       mode,
       coordinateSystem: "x: 0->100 progress left-to-right, y: lane 1->10 top-to-bottom",
       rounds: {
