@@ -35,6 +35,7 @@ npm run lint:fix
 npm run format:check
 npm run format
 npm run test:unit
+npm run test:components
 npm run test:e2e
 ```
 

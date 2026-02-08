@@ -11,13 +11,15 @@
     "preview": "nuxt preview",
     "prepare": "husky",
     "postinstall": "nuxt prepare",
-    "test": "npm run test:unit && npm run test:e2e",
+    "test": "npm run test:unit && npm run test:components && npm run test:e2e",
     "test:unit": "node --experimental-strip-types --test tests/unit/raceEngine.test.ts",
     "test:e2e": "playwright test",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier . --write",
-    "format:check": "prettier . --check"
+    "format:check": "prettier . --check",
+    "test:components": "vitest run",
+    "test:components:watch": "vitest"
   },
   "dependencies": {
     "nuxt": "4.3.0",
@@ -30,13 +32,17 @@
     "@playwright/test": "1.58.2",
     "@typescript-eslint/eslint-plugin": "^8.55.0",
     "@typescript-eslint/parser": "^8.55.0",
+    "@vitejs/plugin-vue": "^6.0.4",
+    "@vue/test-utils": "^2.4.6",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-vue": "^10.7.0",
     "globals": "^17.3.0",
+    "happy-dom": "^20.6.1",
     "husky": "^9.1.7",
     "prettier": "^3.8.1",
     "typescript": "^5.9.3",
+    "vitest": "^4.0.18",
     "vue-eslint-parser": "^10.2.0"
   }
 }
