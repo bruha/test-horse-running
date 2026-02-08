@@ -13,7 +13,11 @@
     "postinstall": "nuxt prepare",
     "test": "npm run test:unit && npm run test:e2e",
     "test:unit": "node --experimental-strip-types --test tests/unit/raceEngine.test.ts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check"
   },
   "dependencies": {
     "nuxt": "4.3.0",
@@ -22,7 +26,16 @@
     "vuex": "4.1.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.2",
     "@playwright/test": "1.58.2",
-    "husky": "^9.1.7"
+    "@typescript-eslint/eslint-plugin": "^8.55.0",
+    "@typescript-eslint/parser": "^8.55.0",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-vue": "^10.7.0",
+    "globals": "^17.3.0",
+    "husky": "^9.1.7",
+    "prettier": "^3.8.1",
+    "vue-eslint-parser": "^10.2.0"
   }
 }

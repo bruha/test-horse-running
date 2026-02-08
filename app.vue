@@ -103,8 +103,8 @@ onBeforeUnmount(() => {
     <header class="hero">
       <h1>Horse Racing Trial Day</h1>
       <p>
-        Local front-end race simulator built with Nuxt 4. Fixed pool of 20 horses, 6 rounds,
-        and live track animation.
+        Local front-end race simulator built with Nuxt 4. Fixed pool of 20 horses, 6 rounds, and
+        live track animation.
       </p>
     </header>
 
@@ -112,15 +112,11 @@ onBeforeUnmount(() => {
       <button type="button" class="btn btn-accent" @click="generateProgram()">
         Generate Program
       </button>
-      <button type="button" class="btn" :disabled="!canStart" @click="start()">
-        Start
-      </button>
+      <button type="button" class="btn" :disabled="!canStart" @click="start()">Start</button>
       <button type="button" class="btn" :disabled="!canPause" @click="togglePause()">
         {{ isPaused ? "Resume" : "Pause" }}
       </button>
-      <button type="button" class="btn" :disabled="!canReset" @click="resetGame()">
-        Reset
-      </button>
+      <button type="button" class="btn" :disabled="!canReset" @click="resetGame()">Reset</button>
 
       <div class="status">
         <span class="status-label">Status</span>
@@ -150,7 +146,9 @@ onBeforeUnmount(() => {
 
       <article class="card">
         <h3>Horse Roster</h3>
-        <p class="card-copy">Condition score range is 1-100 and impacts speed every simulation tick.</p>
+        <p class="card-copy">
+          Condition score range is 1-100 and impacts speed every simulation tick.
+        </p>
         <div class="roster-table-wrap">
           <table>
             <thead>
@@ -176,7 +174,9 @@ onBeforeUnmount(() => {
 
       <article class="card">
         <h3>Race Log</h3>
-        <p class="card-copy">Sequential event stream for starts, finishes, pause/resume, and completion.</p>
+        <p class="card-copy">
+          Sequential event stream for starts, finishes, pause/resume, and completion.
+        </p>
         <ul v-if="eventLog.length" class="log-list">
           <li v-for="line in eventLog" :key="line">{{ line }}</li>
         </ul>
@@ -271,7 +271,9 @@ onBeforeUnmount(() => {
   border-radius: 12px;
   font-weight: 700;
   cursor: pointer;
-  transition: transform 120ms ease, border-color 120ms ease;
+  transition:
+    transform 120ms ease,
+    border-color 120ms ease;
 }
 
 .btn:hover:not(:disabled) {

@@ -63,11 +63,7 @@ function normalizedProgress(progress: number): string {
         <span v-for="marker in markers" :key="marker">{{ marker }}%</span>
       </div>
 
-      <div
-        v-for="entry in activeRound.entries"
-        :key="entry.horseId"
-        class="lane"
-      >
+      <div v-for="entry in activeRound.entries" :key="entry.horseId" class="lane">
         <span class="lane-id">L{{ entry.lane }}</span>
         <div class="lane-track">
           <div

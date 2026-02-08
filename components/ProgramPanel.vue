@@ -8,9 +8,7 @@ const props = defineProps<{
 }>()
 
 function participantLabel(round: RaceRound): string {
-  return round.horseIds
-    .map((horseId) => props.horsesById.get(horseId)?.name ?? horseId)
-    .join(", ")
+  return round.horseIds.map((horseId) => props.horsesById.get(horseId)?.name ?? horseId).join(", ")
 }
 
 function statusText(status: RoundStatus): string {

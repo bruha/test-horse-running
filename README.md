@@ -30,6 +30,10 @@ Local frontend-only horse racing game implemented with Nuxt 4.
 npm run dev
 npm run build
 npm run build:github-pages
+npm run lint
+npm run lint:fix
+npm run format:check
+npm run format
 npm run test:unit
 npm run test:e2e
 ```

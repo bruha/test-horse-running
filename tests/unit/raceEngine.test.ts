@@ -35,7 +35,10 @@ test("buildRaceSchedule returns expected rounds and horses per round", () => {
   const schedule = buildRaceSchedule(horses, rng)
 
   assert.equal(schedule.length, 6)
-  assert.deepEqual(schedule.map((round) => round.distance), [1200, 1400, 1600, 1800, 2000, 2200])
+  assert.deepEqual(
+    schedule.map((round) => round.distance),
+    [1200, 1400, 1600, 1800, 2000, 2200]
+  )
 
   for (const round of schedule) {
     assert.equal(round.horseIds.length, 10)

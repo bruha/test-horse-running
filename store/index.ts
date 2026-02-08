@@ -1,5 +1,11 @@
 import { createStore, type Store } from "vuex"
-import { type Horse, type RaceRound, type RoundResult, type RoundState, type RoundStatus } from "~/utils/raceEngine"
+import {
+  type Horse,
+  type RaceRound,
+  type RoundResult,
+  type RoundState,
+  type RoundStatus
+} from "~/utils/raceEngine"
 
 export interface HorseRaceStoreState {
   horses: Horse[]

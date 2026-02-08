@@ -48,7 +48,9 @@ function horseColor(horseId: string): string {
           <span class="rank">#{{ entry.position }}</span>
           <span class="color-dot" :style="{ backgroundColor: horseColor(entry.horseId) }" />
           <span class="name">{{ entry.horseName }}</span>
-          <span class="time">{{ (entry.timeMs / MILLISECONDS_IN_SECOND).toFixed(RESULT_TIME_DECIMALS) }}s</span>
+          <span class="time"
+            >{{ (entry.timeMs / MILLISECONDS_IN_SECOND).toFixed(RESULT_TIME_DECIMALS) }}s</span
+          >
         </li>
       </ol>
     </article>

@@ -198,7 +198,10 @@ function sample<T>(items: readonly T[], count: number, rng: RandomSource = Math.
   return shuffle(items, rng).slice(0, count)
 }
 
-export function createHorsePool(count: number = DEFAULT_HORSE_COUNT, rng: RandomSource = Math.random): Horse[] {
+export function createHorsePool(
+  count: number = DEFAULT_HORSE_COUNT,
+  rng: RandomSource = Math.random
+): Horse[] {
   invariant(count > 0, "Horse count must be greater than zero")
   invariant(count <= HORSE_NAME_POOL.length, "Horse count exceeds available unique names")
   invariant(count <= HORSE_COLOR_PALETTE.length, "Horse count exceeds available predefined colors")
@@ -210,7 +213,11 @@ export function createHorsePool(count: number = DEFAULT_HORSE_COUNT, rng: Random
     const condition = randomInt(CONDITION_MIN, CONDITION_MAX, rng)
     const color = colors[index]
     const basePace = Number(
-      (BASE_PACE_MIN + condition * BASE_PACE_CONDITION_SCALE + rng() * BASE_PACE_RANDOM_SPREAD).toFixed(2)
+      (
+        BASE_PACE_MIN +
+        condition * BASE_PACE_CONDITION_SCALE +
+        rng() * BASE_PACE_RANDOM_SPREAD
+      ).toFixed(2)
     )
 
     return {
@@ -224,7 +231,10 @@ export function createHorsePool(count: number = DEFAULT_HORSE_COUNT, rng: Random
 }
 
 export function buildRaceSchedule(horses: Horse[], rng: RandomSource = Math.random): RaceRound[] {
-  invariant(Array.isArray(horses) && horses.length >= HORSES_PER_ROUND, "At least 10 horses are required")
+  invariant(
+    Array.isArray(horses) && horses.length >= HORSES_PER_ROUND,
+    "At least 10 horses are required"
+  )
   const horseIds = horses.map((horse) => horse.id)
 
   return ROUND_DISTANCES.map((distance, roundIndex) => ({
@@ -271,7 +281,8 @@ function calculateSpeedMetersPerSecond(
   rng: RandomSource = Math.random
 ): number {
   const progressRatio = entry.distanceCovered / roundDistance
-  const conditionMultiplier = CONDITION_MULTIPLIER_BASE + horse.condition / CONDITION_MULTIPLIER_SCALE
+  const conditionMultiplier =
+    CONDITION_MULTIPLIER_BASE + horse.condition / CONDITION_MULTIPLIER_SCALE
   const randomPulse = RANDOM_PULSE_BASE + rng() * RANDOM_PULSE_RANGE
   const fatigue = 1 - progressRatio * FATIGUE_MAX_PENALTY
   const lateBoost =

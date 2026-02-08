@@ -19,8 +19,7 @@ test("game flow: generate, start, pause, resume, and receive results", async ({ 
   const firstHorseToken = page.locator("[data-testid='horse-token']").first()
   await expect(firstHorseToken).toBeVisible()
 
-  const currentProgress = async () =>
-    Number(await firstHorseToken.getAttribute("data-progress"))
+  const currentProgress = async () => Number(await firstHorseToken.getAttribute("data-progress"))
 
   await page.waitForTimeout(400)
   const beforeMove = await currentProgress()
