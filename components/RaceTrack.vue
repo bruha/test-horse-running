@@ -63,8 +63,9 @@ function horseMaskSrc(entry) {
           <div
             class="horse-token"
             data-testid="horse-token"
+            :data-progress="entry.progress.toFixed(4)"
             :style="{
-              left: `${Math.min(100, Math.max(0, entry.progress * 100))}%`
+              '--progress': Math.min(1, Math.max(0, entry.progress)).toFixed(4)
             }"
           >
             <div class="horse-art" aria-hidden="true">
@@ -202,14 +203,16 @@ function horseMaskSrc(entry) {
     ),
     rgba(15, 23, 42, 0.96);
   overflow: hidden;
+  contain: layout paint;
 }
 
 .horse-token {
+  --horse-token-width: 176px;
   position: absolute;
   top: 4px;
-  transform: translateX(-50%);
-  min-width: 168px;
-  max-width: 220px;
+  left: calc(var(--progress) * (100% - var(--horse-token-width)));
+  width: var(--horse-token-width);
+  transform: translate3d(0, 0, 0);
   border-radius: 14px;
   border: 1px solid rgba(15, 23, 42, 0.5);
   background: linear-gradient(160deg, rgba(15, 23, 42, 0.55), rgba(15, 23, 42, 0.9));
@@ -219,6 +222,8 @@ function horseMaskSrc(entry) {
   gap: 8px;
   padding: 4px 8px;
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.3);
+  will-change: left;
+  backface-visibility: hidden;
 }
 
 .horse-art {
@@ -229,6 +234,7 @@ function horseMaskSrc(entry) {
   border: 1px solid rgba(15, 23, 42, 0.42);
   background: linear-gradient(140deg, rgba(15, 23, 42, 0.18), rgba(15, 23, 42, 0.4));
   overflow: hidden;
+  contain: paint;
 }
 
 .horse-shape {
@@ -244,6 +250,7 @@ function horseMaskSrc(entry) {
   mask-position: center;
   -webkit-mask-size: contain;
   mask-size: contain;
+  will-change: mask-position;
 }
 
 .horse-meta {
@@ -268,6 +275,10 @@ function horseMaskSrc(entry) {
 @media (max-width: 1024px) {
   .track-panel {
     min-height: auto;
+  }
+
+  .horse-token {
+    --horse-token-width: 168px;
   }
 }
 </style>

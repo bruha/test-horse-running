@@ -11,6 +11,10 @@ import {
 
 const INTERMISSION_MS = 900
 const SIMULATION_SPEED = 12
+const SIMULATION_STEP_MS = 48
+const MAX_FRAME_DELTA_MS = 120
+const MAX_STEPS_PER_FRAME = 8
+const MAX_ACCUMULATED_SIMULATION_MS = SIMULATION_STEP_MS * MAX_STEPS_PER_FRAME
 
 function withStatus(schedule) {
   return schedule.map((round) => ({
@@ -105,6 +109,8 @@ export function useHorseRaceGame() {
   const canPause = computed(() => Boolean(activeRound.value) && isRunning.value)
 
   const leaderboard = computed(() => buildLeaderboard(horses.value, results.value))
+  let horseMapCache = new Map()
+  let simulationAccumulatorMs = 0
 
   function appendLog(message) {
     const timestamp = new Date().toLocaleTimeString("en-US", {
@@ -129,12 +135,14 @@ export function useHorseRaceGame() {
     const rng = createSeededRng(nextSeed)
 
     horses.value = createHorsePool(20, rng)
+    horseMapCache = createHorseMap(horses.value)
     program.value = withStatus(buildRaceSchedule(horses.value, rng))
     results.value = []
     activeRound.value = null
     isRunning.value = false
     isPaused.value = false
     eventLog.value = []
+    simulationAccumulatorMs = 0
 
     appendLog(`Generated 20 horses and a 6-round schedule (seed ${nextSeed}).`)
   }
@@ -151,8 +159,6 @@ export function useHorseRaceGame() {
     }
 
     clearIntermission()
-    const horseMap = createHorseMap(horses.value)
-
     program.value = program.value.map((round, index) => {
       if (index === roundIndex) {
         return { ...round, status: "running" }
@@ -160,7 +166,8 @@ export function useHorseRaceGame() {
       return round
     })
 
-    activeRound.value = createRoundState(nextRound, horseMap)
+    activeRound.value = createRoundState(nextRound, horseMapCache)
+    simulationAccumulatorMs = 0
     isPaused.value = false
     isRunning.value = true
 
@@ -220,16 +227,31 @@ export function useHorseRaceGame() {
       return
     }
 
-    const horseMap = createHorseMap(horses.value)
-    stepRound(activeRound.value, deltaMs * SIMULATION_SPEED, horseMap, Math.random)
+    const clampedDeltaMs = Math.min(MAX_FRAME_DELTA_MS, deltaMs)
+    simulationAccumulatorMs = Math.min(
+      MAX_ACCUMULATED_SIMULATION_MS,
+      simulationAccumulatorMs + clampedDeltaMs * SIMULATION_SPEED
+    )
 
-    activeRound.value = {
-      ...activeRound.value,
-      entries: [...activeRound.value.entries]
+    let stepsProcessed = 0
+    while (
+      simulationAccumulatorMs >= SIMULATION_STEP_MS &&
+      activeRound.value &&
+      !activeRound.value.complete &&
+      stepsProcessed < MAX_STEPS_PER_FRAME
+    ) {
+      stepRound(activeRound.value, SIMULATION_STEP_MS, horseMapCache, Math.random)
+      simulationAccumulatorMs -= SIMULATION_STEP_MS
+      stepsProcessed += 1
     }
 
-    if (activeRound.value.complete) {
-      finishRound(horseMap)
+    if (stepsProcessed >= MAX_STEPS_PER_FRAME && simulationAccumulatorMs >= SIMULATION_STEP_MS) {
+      simulationAccumulatorMs = 0
+    }
+
+    if (activeRound.value?.complete) {
+      simulationAccumulatorMs = 0
+      finishRound(horseMapCache)
     }
   }
 
@@ -243,6 +265,8 @@ export function useHorseRaceGame() {
     isPaused.value = false
     eventLog.value = []
     seed.value = 0
+    horseMapCache = new Map()
+    simulationAccumulatorMs = 0
   }
 
   function renderSnapshot() {
@@ -270,7 +294,7 @@ export function useHorseRaceGame() {
             distance: activeRound.value.distance,
             elapsedMs: Number(activeRound.value.elapsedMs.toFixed(2)),
             entries: activeRound.value.entries.map((entry) => {
-              const horse = horses.value.find((item) => item.id === entry.horseId)
+              const horse = horseMapCache.get(entry.horseId)
               return {
                 horseId: entry.horseId,
                 horseName: horse?.name ?? entry.horseId,
@@ -315,4 +339,3 @@ export function useHorseRaceGame() {
     renderSnapshot
   }
 }
-
