@@ -29,9 +29,31 @@ Local frontend-only horse racing game implemented with Nuxt 4.
 ```bash
 npm run dev
 npm run build
+npm run build:github-pages
 npm run test:unit
 npm run test:e2e
 ```
+
+## Deploy To GitHub Pages
+
+This repository is configured to deploy from GitHub Actions to GitHub Pages.
+
+1. In GitHub repository settings, open **Pages**.
+2. Set **Build and deployment** source to **GitHub Actions**.
+3. Push to `main` (or run the workflow manually from the Actions tab).
+
+The workflow is defined in:
+
+- `.github/workflows/deploy-gh-pages.yml`
+
+It builds Nuxt using the `github_pages` preset and publishes `.output/public`.
+For this repository (`bruha/test-horse-running`), the base URL is set to:
+
+- `/test-horse-running/`
+
+Expected production URL:
+
+- `https://bruha.github.io/test-horse-running/`
 
 ## Testing
 
