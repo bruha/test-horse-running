@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { computed } from "vue"
 import { type Horse, type RoundEntry, type RoundState } from "~/utils/raceEngine"
+import {
+  HORSE_ART_ASSETS,
+  HORSE_FALLBACK_COLOR,
+  TRACK_IDLE_LABEL,
+  TRACK_MARKERS,
+  TRACK_PROGRESS_LIMITS
+} from "~/utils/gameConstants"
 
-const DEFAULT_HORSE_COLOR = "#9ca3af"
-const HORSE_MASK_ASSET = "/images/running-horse-mask.apng"
-const HORSE_STAND_MASK_ASSET = "/images/running-horse-stand-mask.png"
-const TRACK_PROGRESS_MIN = 0
-const TRACK_PROGRESS_MAX = 1
+const TRACK_PROGRESS_DECIMALS = 4
 
 const props = defineProps<{
   activeRound: RoundState | null
@@ -14,22 +17,27 @@ const props = defineProps<{
   isPaused: boolean
 }>()
 
-const markers = [0, 25, 50, 75, 100]
+const markers = TRACK_MARKERS
 
 const roundLabel = computed(() => {
   if (!props.activeRound) {
-    return "No race is active"
+    return TRACK_IDLE_LABEL
   }
   return `Round ${props.activeRound.roundId} • ${props.activeRound.distance}m`
 })
 
 function horseColor(entry: RoundEntry): string {
-  return props.horsesById.get(entry.horseId)?.color ?? DEFAULT_HORSE_COLOR
+  return props.horsesById.get(entry.horseId)?.color ?? HORSE_FALLBACK_COLOR
 }
 
 function horseMaskSrc(entry: RoundEntry): string {
   const isStopped = props.isPaused || entry.finishTimeMs !== null
-  return isStopped ? HORSE_STAND_MASK_ASSET : HORSE_MASK_ASSET
+  return isStopped ? HORSE_ART_ASSETS.STANDING_MASK : HORSE_ART_ASSETS.RUNNING_MASK
+}
+
+function normalizedProgress(progress: number): string {
+  const clamped = Math.min(TRACK_PROGRESS_LIMITS.MAX, Math.max(TRACK_PROGRESS_LIMITS.MIN, progress))
+  return clamped.toFixed(TRACK_PROGRESS_DECIMALS)
 }
 </script>
 
@@ -61,9 +69,9 @@ function horseMaskSrc(entry: RoundEntry): string {
           <div
             class="horse-token"
             data-testid="horse-token"
-            :data-progress="entry.progress.toFixed(4)"
+            :data-progress="entry.progress.toFixed(TRACK_PROGRESS_DECIMALS)"
             :style="{
-              '--progress': Math.min(TRACK_PROGRESS_MAX, Math.max(TRACK_PROGRESS_MIN, entry.progress)).toFixed(4)
+              '--progress': normalizedProgress(entry.progress)
             }"
           >
             <div class="horse-art" aria-hidden="true">

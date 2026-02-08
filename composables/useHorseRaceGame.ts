@@ -12,11 +12,13 @@ import {
   type Horse,
   type HorseMap,
   type RaceRound,
+  type RoundStatus,
   type RoundResult,
   type RoundState
 } from "~/utils/raceEngine"
+import { MILLISECONDS_IN_SECOND, SNAPSHOT_COORDINATE_SYSTEM } from "~/utils/gameConstants"
 
-const STATE_KEYS = Object.freeze({
+const STATE_KEYS = {
   HORSES: "horse-race-horses",
   PROGRAM: "horse-race-program",
   RESULTS: "horse-race-results",
@@ -26,7 +28,7 @@ const STATE_KEYS = Object.freeze({
   EVENT_LOG: "horse-race-event-log",
   SEED: "horse-race-seed",
   INTERMISSION_HANDLE: "horse-race-intermission-handle"
-} as const)
+} as const
 
 const INTERMISSION_MS = 900
 const SIMULATION_SPEED = 12
@@ -36,35 +38,37 @@ const MAX_STEPS_PER_FRAME = 8
 const MAX_ACCUMULATED_SIMULATION_MS = SIMULATION_STEP_MS * MAX_STEPS_PER_FRAME
 
 const EVENT_LOG_LIMIT = 16
-const TOP_POSITION_POINTS = Object.freeze({
-  FIRST: 5,
-  SECOND: 3,
-  THIRD: 2,
-  PARTICIPATION: 1
-} as const)
+const PODIUM_FIRST_POSITION = 1
+const PODIUM_MAX_POSITION = 3
+const PARTICIPATION_POINTS = 1
+const POINTS_BY_PODIUM_POSITION: Record<number, number> = {
+  1: 5,
+  2: 3,
+  3: 2
+}
 
-const PODIUM_POSITION = Object.freeze({
-  FIRST: 1,
-  SECOND: 2,
-  THIRD: 3
-} as const)
+const LEADERBOARD_AVERAGE_DECIMALS = 2
+const ROUND_TIME_DECIMALS = 2
+const SNAPSHOT_ELAPSED_MS_DECIMALS = 2
+const SNAPSHOT_PROGRESS_DECIMALS = 3
+const SNAPSHOT_SPEED_DECIMALS = 2
+const FALLBACK_CONDITION_SCORE = 0
 
-const TIMESTAMP_FORMAT: Intl.DateTimeFormatOptions = Object.freeze({
+const TIMESTAMP_FORMAT: Intl.DateTimeFormatOptions = {
   hour: "2-digit",
   minute: "2-digit",
   second: "2-digit",
   hour12: false
-})
+}
 
-const MILLISECONDS_IN_SECOND = 1000
 const TOTAL_ROUNDS = ROUND_DISTANCES.length
-const SNAPSHOT_MODE = Object.freeze({
+const SNAPSHOT_MODE = {
   IDLE: "idle",
   PAUSED: "paused",
   RACING: "racing",
   FINISHED: "finished",
   READY: "ready"
-} as const)
+} as const
 
 const CHAMPIONSHIP_COMPLETE_MESSAGE = `Championship complete. All ${TOTAL_ROUNDS} rounds finished.`
 
@@ -145,26 +149,25 @@ function buildLeaderboard(horses: Horse[], results: RoundResult[]): LeaderboardR
       row.rounds += 1
       row.totalTimeMs += item.timeMs
 
-      if (item.position === PODIUM_POSITION.FIRST) {
+      if (item.position === PODIUM_FIRST_POSITION) {
         row.wins += 1
-        row.podiums += 1
-        row.points += TOP_POSITION_POINTS.FIRST
-      } else if (item.position === PODIUM_POSITION.SECOND) {
-        row.podiums += 1
-        row.points += TOP_POSITION_POINTS.SECOND
-      } else if (item.position === PODIUM_POSITION.THIRD) {
-        row.podiums += 1
-        row.points += TOP_POSITION_POINTS.THIRD
-      } else {
-        row.points += TOP_POSITION_POINTS.PARTICIPATION
       }
+
+      if (item.position <= PODIUM_MAX_POSITION) {
+        row.podiums += 1
+      }
+
+      row.points += POINTS_BY_PODIUM_POSITION[item.position] ?? PARTICIPATION_POINTS
     }
   }
 
   return [...summary.values()]
     .map((row) => ({
       ...row,
-      avgTimeMs: row.rounds > 0 ? Number((row.totalTimeMs / row.rounds).toFixed(2)) : 0
+      avgTimeMs:
+        row.rounds > 0
+          ? Number((row.totalTimeMs / row.rounds).toFixed(LEADERBOARD_AVERAGE_DECIMALS))
+          : 0
     }))
     .sort((left, right) => {
       if (left.points !== right.points) {
@@ -176,8 +179,8 @@ function buildLeaderboard(horses: Horse[], results: RoundResult[]): LeaderboardR
 
       const leftHorse = horseLookup.get(left.horseId)
       const rightHorse = horseLookup.get(right.horseId)
-      const leftCondition = leftHorse?.condition ?? 0
-      const rightCondition = rightHorse?.condition ?? 0
+      const leftCondition = leftHorse?.condition ?? FALLBACK_CONDITION_SCORE
+      const rightCondition = rightHorse?.condition ?? FALLBACK_CONDITION_SCORE
       return rightCondition - leftCondition
     })
 }
@@ -197,7 +200,7 @@ export function useHorseRaceGame() {
   )
 
   const hasProgram = computed(
-    () => horses.value.length === DEFAULT_HORSE_COUNT && program.value.length === ROUND_DISTANCES.length
+    () => horses.value.length === DEFAULT_HORSE_COUNT && program.value.length === TOTAL_ROUNDS
   )
   const isCompleted = computed(
     () => hasProgram.value && results.value.length === program.value.length && !activeRound.value
@@ -221,6 +224,35 @@ export function useHorseRaceGame() {
     }
   }
 
+  function setRoundStatus(roundIndex: number, status: RoundStatus) {
+    program.value = program.value.map((round, index) =>
+      index === roundIndex ? { ...round, status } : round
+    )
+  }
+
+  function clearRoundState() {
+    activeRound.value = null
+    isRunning.value = false
+    isPaused.value = false
+    simulationAccumulatorMs = 0
+  }
+
+  function resolveSnapshotMode(): SnapshotPayload["mode"] {
+    if (!hasProgram.value) {
+      return SNAPSHOT_MODE.IDLE
+    }
+    if (activeRound.value && isPaused.value) {
+      return SNAPSHOT_MODE.PAUSED
+    }
+    if (activeRound.value) {
+      return SNAPSHOT_MODE.RACING
+    }
+    if (isCompleted.value) {
+      return SNAPSHOT_MODE.FINISHED
+    }
+    return SNAPSHOT_MODE.READY
+  }
+
   function generateProgram(nextSeed: number = Date.now()) {
     clearIntermission()
     seed.value = nextSeed
@@ -230,11 +262,8 @@ export function useHorseRaceGame() {
     horseMapCache = createHorseMap(horses.value)
     program.value = withStatus(buildRaceSchedule(horses.value, rng))
     results.value = []
-    activeRound.value = null
-    isRunning.value = false
-    isPaused.value = false
+    clearRoundState()
     eventLog.value = []
-    simulationAccumulatorMs = 0
 
     appendLog(`Generated ${DEFAULT_HORSE_COUNT} horses and a ${TOTAL_ROUNDS}-round schedule (seed ${nextSeed}).`)
   }
@@ -251,12 +280,7 @@ export function useHorseRaceGame() {
     }
 
     clearIntermission()
-    program.value = program.value.map((round, index) => {
-      if (index === roundIndex) {
-        return { ...round, status: ROUND_STATUS.RUNNING }
-      }
-      return round
-    })
+    setRoundStatus(roundIndex, ROUND_STATUS.RUNNING)
 
     activeRound.value = createRoundState(nextRound, horseMapCache)
     simulationAccumulatorMs = 0
@@ -289,21 +313,14 @@ export function useHorseRaceGame() {
     const result = buildRoundResult(currentRoundState, horseMap)
 
     results.value = [...results.value, result]
-    program.value = program.value.map((round, index) => {
-      if (index === finishedRoundIndex) {
-        return { ...round, status: ROUND_STATUS.FINISHED }
-      }
-      return round
-    })
+    setRoundStatus(finishedRoundIndex, ROUND_STATUS.FINISHED)
 
     const winner = result.order[0]
     appendLog(
-      `Round ${result.roundId} finished. Winner: ${winner.horseName} (${(winner.timeMs / MILLISECONDS_IN_SECOND).toFixed(2)}s).`
+      `Round ${result.roundId} finished. Winner: ${winner.horseName} (${(winner.timeMs / MILLISECONDS_IN_SECOND).toFixed(ROUND_TIME_DECIMALS)}s).`
     )
 
-    activeRound.value = null
-    isRunning.value = false
-    isPaused.value = false
+    clearRoundState()
 
     if (results.value.length < program.value.length) {
       intermissionHandle.value = setTimeout(() => {
@@ -352,30 +369,18 @@ export function useHorseRaceGame() {
     horses.value = []
     program.value = []
     results.value = []
-    activeRound.value = null
-    isRunning.value = false
-    isPaused.value = false
+    clearRoundState()
     eventLog.value = []
     seed.value = 0
     horseMapCache = new Map()
-    simulationAccumulatorMs = 0
   }
 
   function renderSnapshot(): string {
     const latestResult = results.value[results.value.length - 1] ?? null
-    const mode: SnapshotPayload["mode"] = !hasProgram.value
-      ? SNAPSHOT_MODE.IDLE
-      : activeRound.value
-        ? isPaused.value
-          ? SNAPSHOT_MODE.PAUSED
-          : SNAPSHOT_MODE.RACING
-        : isCompleted.value
-          ? SNAPSHOT_MODE.FINISHED
-          : SNAPSHOT_MODE.READY
 
     const payload: SnapshotPayload = {
-      mode,
-      coordinateSystem: "x: 0->100 progress left-to-right, y: lane 1->10 top-to-bottom",
+      mode: resolveSnapshotMode(),
+      coordinateSystem: SNAPSHOT_COORDINATE_SYSTEM,
       rounds: {
         total: program.value.length,
         completed: results.value.length
@@ -384,15 +389,15 @@ export function useHorseRaceGame() {
         ? {
             id: activeRound.value.roundId,
             distance: activeRound.value.distance,
-            elapsedMs: Number(activeRound.value.elapsedMs.toFixed(2)),
+            elapsedMs: Number(activeRound.value.elapsedMs.toFixed(SNAPSHOT_ELAPSED_MS_DECIMALS)),
             entries: activeRound.value.entries.map((entry) => {
               const horse = horseMapCache.get(entry.horseId)
               return {
                 horseId: entry.horseId,
                 horseName: horse?.name ?? entry.horseId,
                 lane: entry.lane,
-                progress: Number(entry.progress.toFixed(3)),
-                speedMps: Number(entry.lastSpeed.toFixed(2)),
+                progress: Number(entry.progress.toFixed(SNAPSHOT_PROGRESS_DECIMALS)),
+                speedMps: Number(entry.lastSpeed.toFixed(SNAPSHOT_SPEED_DECIMALS)),
                 finished: entry.finishTimeMs !== null
               }
             })

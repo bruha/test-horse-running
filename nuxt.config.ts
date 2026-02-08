@@ -1,7 +1,7 @@
 export default defineNuxtConfig({
   compatibilityDate: "2025-11-01",
   devtools: {
-    enabled: false
+    enabled: true
   },
   ssr: false,
   buildDir: ".nuxt",

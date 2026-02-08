@@ -1,12 +1,14 @@
-export const ROUND_DISTANCES = Object.freeze([1200, 1400, 1600, 1800, 2000, 2200] as const)
+import { MILLISECONDS_IN_SECOND } from "./gameConstants.ts"
+
+export const ROUND_DISTANCES = [1200, 1400, 1600, 1800, 2000, 2200] as const
 export const DEFAULT_HORSE_COUNT = 20
 export const HORSES_PER_ROUND = 10
 
-export const ROUND_STATUS = Object.freeze({
+export const ROUND_STATUS = {
   PENDING: "pending",
   RUNNING: "running",
   FINISHED: "finished"
-} as const)
+} as const
 
 export type RoundStatus = (typeof ROUND_STATUS)[keyof typeof ROUND_STATUS]
 export type RandomSource = () => number
@@ -70,7 +72,7 @@ export interface RoundResult {
 
 export type HorseMap = Map<string, Horse>
 
-const HORSE_NAME_POOL = Object.freeze([
+const HORSE_NAME_POOL = [
   "Crimson Arrow",
   "Northern Comet",
   "Silver Tempest",
@@ -111,9 +113,9 @@ const HORSE_NAME_POOL = Object.freeze([
   "Neon Crusader",
   "Prairie Echo",
   "Opal Jet"
-])
+]
 
-export const HORSE_COLOR_PALETTE = Object.freeze([
+export const HORSE_COLOR_PALETTE = [
   "#e81717",
   "#ec713c",
   "#e89417",
@@ -134,7 +136,7 @@ export const HORSE_COLOR_PALETTE = Object.freeze([
   "#ec3cda",
   "#e81794",
   "#ec3c71"
-])
+]
 
 const RNG_MODULUS = 2_147_483_647
 const RNG_MULTIPLIER = 48_271
@@ -156,7 +158,6 @@ const LATE_BOOST_BASE = 1.05
 const LATE_BOOST_RANGE = 0.08
 const MINIMUM_SPEED_MPS = 4.2
 
-const MILLISECONDS_IN_SECOND = 1000
 const MAX_SIMULATION_DURATION_MS = 600_000
 
 function invariant(condition: boolean, message: string): asserts condition {

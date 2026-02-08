@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { type Horse, type RoundResult } from "~/utils/raceEngine"
+import {
+  HORSE_FALLBACK_COLOR,
+  MILLISECONDS_IN_SECOND,
+  RESULTS_EMPTY_MESSAGE
+} from "~/utils/gameConstants"
 
-const DEFAULT_HORSE_COLOR = "#94a3b8"
-const MILLISECONDS_IN_SECOND = 1000
+const RESULT_TIME_DECIMALS = 2
 
 const props = defineProps<{
   results: RoundResult[]
@@ -10,7 +14,7 @@ const props = defineProps<{
 }>()
 
 function horseColor(horseId: string): string {
-  return props.horsesById.get(horseId)?.color ?? DEFAULT_HORSE_COLOR
+  return props.horsesById.get(horseId)?.color ?? HORSE_FALLBACK_COLOR
 }
 </script>
 
@@ -21,7 +25,7 @@ function horseColor(horseId: string): string {
       <p>Completed rounds in finish order</p>
     </header>
 
-    <div v-if="results.length === 0" class="results-empty">Race results will appear after each round.</div>
+    <div v-if="results.length === 0" class="results-empty">{{ RESULTS_EMPTY_MESSAGE }}</div>
 
     <article
       v-for="result in results"
@@ -44,7 +48,7 @@ function horseColor(horseId: string): string {
           <span class="rank">#{{ entry.position }}</span>
           <span class="color-dot" :style="{ backgroundColor: horseColor(entry.horseId) }" />
           <span class="name">{{ entry.horseName }}</span>
-          <span class="time">{{ (entry.timeMs / MILLISECONDS_IN_SECOND).toFixed(2) }}s</span>
+          <span class="time">{{ (entry.timeMs / MILLISECONDS_IN_SECOND).toFixed(RESULT_TIME_DECIMALS) }}s</span>
         </li>
       </ol>
     </article>

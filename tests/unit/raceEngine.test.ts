@@ -1,8 +1,6 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 import {
-  ROUND_DISTANCES,
-  ROUND_STATUS,
   createSeededRng,
   createHorsePool,
   buildRaceSchedule,
@@ -12,7 +10,7 @@ import {
   simulateRound
 } from "../../utils/raceEngine.ts"
 
-test("createHorsePool returns exactly 20 horses with unique names", () => {
+test("createHorsePool returns expected horse count with unique names", () => {
   const rng = createSeededRng(42)
   const horses = createHorsePool(20, rng)
 
@@ -31,16 +29,13 @@ test("createHorsePool returns exactly 20 horses with unique names", () => {
   }
 })
 
-test("buildRaceSchedule returns 6 rounds with required distances and 10 horses each", () => {
+test("buildRaceSchedule returns expected rounds and horses per round", () => {
   const rng = createSeededRng(1204)
   const horses = createHorsePool(20, rng)
   const schedule = buildRaceSchedule(horses, rng)
 
   assert.equal(schedule.length, 6)
-  assert.deepEqual(
-    schedule.map((round) => round.distance),
-    ROUND_DISTANCES
-  )
+  assert.deepEqual(schedule.map((round) => round.distance), [1200, 1400, 1600, 1800, 2000, 2200])
 
   for (const round of schedule) {
     assert.equal(round.horseIds.length, 10)
@@ -96,7 +91,7 @@ test("higher condition horse consistently beats lower condition horse over repea
         id: 1,
         distance: 1400,
         horseIds: ["horse-high", "horse-low"],
-        status: ROUND_STATUS.PENDING
+        status: "pending"
       },
       createHorseMap(horses),
       rng,

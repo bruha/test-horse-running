@@ -35,5 +35,7 @@ test("game flow: generate, start, pause, resume, and receive results", async ({ 
   expect(Math.abs(pausedB - pausedA)).toBeLessThan(0.005)
 
   await page.getByRole("button", { name: "Resume" }).click()
-  await expect(page.locator("[data-testid='result-round']").first()).toBeVisible({ timeout: 20_000 })
+  await expect(page.locator("[data-testid='result-round']").first()).toBeVisible({
+    timeout: 20_000
+  })
 })

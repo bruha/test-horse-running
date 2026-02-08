@@ -1,11 +1,6 @@
 <script setup lang="ts">
-import { ROUND_STATUS, type Horse, type RaceRound, type RoundStatus } from "~/utils/raceEngine"
-
-const ROUND_STATUS_LABEL = Object.freeze({
-  [ROUND_STATUS.PENDING]: "Scheduled",
-  [ROUND_STATUS.RUNNING]: "Running",
-  [ROUND_STATUS.FINISHED]: "Finished"
-} as const)
+import { type Horse, type RaceRound, type RoundStatus } from "~/utils/raceEngine"
+import { ROUND_STATUS_LABELS } from "~/utils/gameConstants"
 
 const props = defineProps<{
   program: RaceRound[]
@@ -19,7 +14,7 @@ function participantLabel(round: RaceRound): string {
 }
 
 function statusText(status: RoundStatus): string {
-  return ROUND_STATUS_LABEL[status]
+  return ROUND_STATUS_LABELS[status]
 }
 </script>
 
